@@ -294,7 +294,7 @@ class EnemyMissile():
         window.blit(self.missile_img, (self.rect.x, self.rect.y))
 
 
-def draw(window, background, bg_image, player, enemies, missile=None, enemy_missiles=None):
+def draw(window, bg_image, player, enemies, missile=None, enemy_missiles=None):
     window.blit(bg_image, (0, 0))
     
     player.draw(window)
@@ -399,7 +399,7 @@ def main(window):
 
     while running:
         clock.tick(FPS)
-        background, bg_image = pygame.image.load(join("assets", "background.png")), pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
+        bg_image = pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -427,7 +427,7 @@ def main(window):
             enemy_missiles.append(EnemyMissile(em_x, em_y, em_w, em_h))
             last_enemy_shot = now
 
-        draw(window, background, bg_image, player, enemies, missile, enemy_missiles)
+        draw(window, bg_image, player, enemies, missile, enemy_missiles)
         
         handle_player_movement(player)
         
