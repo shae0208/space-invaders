@@ -1,19 +1,11 @@
 import pygame
-from pygame import mixer
 import random
 import os
+from pygame import mixer
 from os import listdir
 from os.path import isfile, join
 
-
 pygame.init()
-
-pygame.display.set_caption("Space Invaders")
-icon = pygame.image.load(join("assets", "ufo.png"))
-pygame.display.set_icon(icon)
-
-mixer.music.load(join("assets", "background.wav"))
-mixer.music.play(-1)
 
 WIDTH, HEIGHT = 1200, 800
 FPS = 60
@@ -26,6 +18,9 @@ ENEMY_DROP = 25
 ENEMY_SPEED_MULTIPLIER = 2
 
 window = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Space Invaders")
+icon = pygame.image.load(join("assets", "ufo.png"))
+pygame.display.set_icon(icon)
 
 
 def start_menu(window):
@@ -33,7 +28,7 @@ def start_menu(window):
     title_font = pygame.font.SysFont(None, 96)
     instr_font = pygame.font.SysFont(None, 36)
     
-    bg_image = pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
+    background = pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
 
     showing = True
     
@@ -49,7 +44,7 @@ def start_menu(window):
                 if event.key == pygame.K_SPACE:
                     showing = False
 
-        window.blit(bg_image, (0, 0))
+        window.blit(background, (0, 0))
         
         title_surf = title_font.render("Space Invaders", True, (255, 255, 255))
         start_instr_surf = instr_font.render("Press SPACE to start", True, (255, 255, 255))
@@ -59,7 +54,7 @@ def start_menu(window):
         start_instr_rect = start_instr_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 40))
         quit_instr_rect = quit_instr_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 80))
 
-        padding = 24
+        padding = 32
         box_left = min(title_rect.left, start_instr_rect.left) - padding
         box_top = title_rect.top - padding
         box_right = max(title_rect.right, start_instr_rect.right) + padding
@@ -68,7 +63,7 @@ def start_menu(window):
         box_h = box_bottom - box_top
 
         overlay = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 160))
+        overlay.fill((0, 0, 0, 128))
         window.blit(overlay, (box_left, box_top))
 
         window.blit(title_surf, title_rect)
@@ -87,6 +82,7 @@ def pause_menu(window):
     
     while showing:
         clock.tick(FPS)
+        mixer.music.pause()
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -96,6 +92,7 @@ def pause_menu(window):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     showing = False
+                    mixer.music.unpause()
 
         title_surf = title_font.render("Game Paused", True, (255, 255, 255))
         start_instr_surf = instr_font.render("Press SPACE to resume", True, (255, 255, 255))
@@ -138,6 +135,7 @@ def game_over_menu(window, score):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+                
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     return True
@@ -186,9 +184,9 @@ def game_overlay(window, score):
     box_h = box_bottom - box_top
 
     overlay = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 160))
+    overlay.fill((0, 0, 0, 128))
+    
     window.blit(overlay, (box_left, box_top))
-
     window.blit(score_surf, score_rect)
     
  
@@ -199,12 +197,10 @@ class Player():
         self.player_img = pygame.image.load(join("assets", "player.png"))
         self.mask = pygame.mask.from_surface(self.player_img)
         self.x_vel = 0
-        self.y_vel = 0
         
         
-    def move(self, dx, dy):
+    def move(self, dx):
         self.rect.x += dx
-        self.rect.y += dy
     
     
     def move_left(self, vel):
@@ -215,10 +211,10 @@ class Player():
         self.x_vel = PLAYER_VEL
     
     
-    def loop(self, fps):
-        self.move(self.x_vel, self.y_vel)
-    
-    
+    def loop(self, FPS):
+        self.move(self.x_vel)
+        
+        
     def draw(self, window):
         window.blit(self.player_img, (self.rect.x, self.rect.y))
 
@@ -243,7 +239,7 @@ class Enemy():
         self.rect.y = int(self.y)
         
         
-    def loop(self, fps):
+    def loop(self, FPS):
         self.move(self.x_vel, self.y_vel)
         
         
@@ -266,7 +262,7 @@ class Missile():
         self.rect.y += dy
 
 
-    def loop(self, fps):
+    def loop(self, FPS):
         self.move(self.y_vel)   
             
             
@@ -287,7 +283,7 @@ class EnemyMissile():
     def move(self, dy):
         self.rect.y += dy
 
-    def loop(self, fps):
+    def loop(self, FPS):
         self.move(self.y_vel)
 
     def draw(self, window):
@@ -375,6 +371,9 @@ def main(window):
     clock = pygame.time.Clock()
     running = True
     
+    mixer.music.load(join("assets", "background.wav"))
+    mixer.music.play(-1)
+    
     start_menu(window)
     
     player = Player(550, 700, 50, 50)
@@ -400,7 +399,7 @@ def main(window):
     while running:
         clock.tick(FPS)
         bg_image = pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
-
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
