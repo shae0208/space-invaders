@@ -2,18 +2,17 @@ import pygame
 import random
 import os
 from pygame import mixer
-from os import listdir
-from os.path import isfile, join
+from os.path import join
 
 pygame.init()
 
-WIDTH, HEIGHT = 1200, 800
+WIDTH, HEIGHT = 1280, 720
 FPS = 60
 PLAYER_VEL = 10
 MISSILE_VEL = 10
 ENEMY_MISSILE_VEL = 5
 ENEMY_VEL = .5
-ENEMY_DIR = 1
+ENEMY_DIR = -1
 ENEMY_DROP = 25
 ENEMY_SPEED_MULTIPLIER = 2
 
@@ -25,8 +24,8 @@ pygame.display.set_icon(icon)
 
 def start_menu(window):
     clock = pygame.time.Clock()
-    title_font = pygame.font.SysFont(None, 96)
-    instr_font = pygame.font.SysFont(None, 36)
+    title_font = pygame.font.SysFont("Zen Dots Regular", 64)
+    instr_font = pygame.font.SysFont(None, 32)
     
     background = pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
 
@@ -75,8 +74,8 @@ def start_menu(window):
 
 def pause_menu(window):
     clock = pygame.time.Clock()
-    title_font = pygame.font.SysFont(None, 96)
-    instr_font = pygame.font.SysFont(None, 36)
+    title_font = pygame.font.SysFont("Zen Dots Regular", 64)
+    instr_font = pygame.font.SysFont(None, 32)
 
     showing = True
     
@@ -121,10 +120,10 @@ def pause_menu(window):
         pygame.display.update()
 
 
-def game_over_menu(window, score):
+def game_over_menu(window, score, won=False):
     clock = pygame.time.Clock()
-    title_font = pygame.font.SysFont(None, 96)
-    instr_font = pygame.font.SysFont(None, 36)
+    title_font = pygame.font.SysFont("Zen Dots Regular", 64)
+    instr_font = pygame.font.SysFont(None, 32)
 
     showing = True
     
@@ -142,12 +141,13 @@ def game_over_menu(window, score):
                 if event.key == pygame.K_ESCAPE:
                     return False
         
-        title_surf = title_font.render("Game Over", True, (255, 255, 255))
+        title_text = "You Win!" if won else "Game Over"
+        title_surf = title_font.render(title_text, True, (255, 255, 255))
         score_surf = instr_font.render(f"Score: {score}", True, (255, 255, 255))
         instr_surf = instr_font.render("Press R to restart or ESC to quit", True, (255, 255, 255))
 
         title_rect = title_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
-        score_rect = score_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        score_rect = score_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 10))
         instr_rect = instr_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
 
         padding = 24
@@ -191,10 +191,10 @@ def game_overlay(window, score):
     
  
 class Player():
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y):
         super().__init__()
-        self.rect = pygame.Rect(x, y, width, height)
-        self.player_img = pygame.image.load(join("assets", "player.png"))
+        self.player_img = pygame.image.load(join("assets", "player.png")).convert_alpha()
+        self.rect = self.player_img.get_rect(center=(x, y))
         self.mask = pygame.mask.from_surface(self.player_img)
         self.x_vel = 0
         
@@ -220,13 +220,13 @@ class Player():
 
 
 class Enemy():
-    def __init__(self, x, y, width, height, row=None):
+    def __init__(self, x, y, row=None):
         super().__init__()
-        self.rect = pygame.Rect(x, y, width, height)
+        self.enemy_img = pygame.image.load(join("assets", "enemy.png")).convert_alpha()
+        self.rect = self.enemy_img.get_rect(center=(x, y))
+        self.mask = pygame.mask.from_surface(self.enemy_img)
         self.x = float(x)
         self.y = float(y)
-        self.enemy_img = pygame.image.load(join("assets", "enemy.png"))
-        self.mask = pygame.mask.from_surface(self.enemy_img)
         self.x_vel = ENEMY_VEL * ENEMY_DIR
         self.y_vel = 0
         self.row = row
@@ -248,12 +248,10 @@ class Enemy():
 
 
 class Missile():
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y):
         super().__init__()
-        scale_w, scale_h = width * 2, height * 2
-        self.rect = pygame.Rect(x, y, scale_w, scale_h)
-        img = pygame.image.load(join("assets", "missile.png"))
-        self.missile_img = pygame.transform.scale(img, (scale_w, scale_h))
+        self.missile_img = pygame.transform.scale(pygame.image.load(join("assets", "missile.png")), (64, 64)).convert_alpha()
+        self.rect = self.missile_img.get_rect(center=(x, y))
         self.mask = pygame.mask.from_surface(self.missile_img)
         self.y_vel = -MISSILE_VEL
             
@@ -271,12 +269,10 @@ class Missile():
 
 
 class EnemyMissile():
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y):
         super().__init__()
-        scale_w, scale_h = width * 2, height * 2
-        self.rect = pygame.Rect(x, y, scale_w, scale_h)
-        img = pygame.image.load(join("assets", "missile.png"))
-        self.missile_img = pygame.transform.scale(img, (scale_w, scale_h))
+        self.missile_img = pygame.transform.scale(pygame.image.load(join("assets", "missile.png")), (48, 48)).convert_alpha()
+        self.rect = self.missile_img.get_rect(center=(x, y))
         self.mask = pygame.mask.from_surface(self.missile_img)
         self.y_vel = ENEMY_MISSILE_VEL
 
@@ -290,11 +286,9 @@ class EnemyMissile():
         window.blit(self.missile_img, (self.rect.x, self.rect.y))
 
 
-def draw(window, bg_image, player, enemies, missile=None, enemy_missiles=None):
-    window.blit(bg_image, (0, 0))
+def draw(window, background, player, enemies, missile=None, enemy_missiles=None):
+    window.blit(background, (0, 0))
     
-    player.draw(window)
-
     for enemy in enemies:
         enemy.draw(window)
 
@@ -305,6 +299,7 @@ def draw(window, bg_image, player, enemies, missile=None, enemy_missiles=None):
         for em in enemy_missiles:
             em.draw(window)
     
+    player.draw(window)
 
 def handle_player_movement(player):
     keys = pygame.key.get_pressed()
@@ -339,7 +334,7 @@ def handle_enemy_movement(enemies):
     leftmost = min(enemy.rect.x for enemy in enemies)
     rightmost = max(enemy.rect.x + enemy.rect.width for enemy in enemies)
     
-    if leftmost + ENEMY_DIR * ENEMY_VEL <= 0 or rightmost + ENEMY_DIR * ENEMY_VEL >= WIDTH - 10:
+    if leftmost + ENEMY_DIR * ENEMY_VEL < 0 or rightmost + ENEMY_DIR * ENEMY_VEL > WIDTH:
         ENEMY_DIR *= -1
         for enemy in enemies:
             enemy.move(0, ENEMY_DROP)
@@ -376,29 +371,27 @@ def main(window):
     
     start_menu(window)
     
-    player = Player(550, 700, 50, 50)
+    player = Player(600, 675)
     missile = None
     enemy_missiles = []
     
     last_enemy_shot = pygame.time.get_ticks()
     
-    enemies_row1 = [Enemy(i * 100, 25, 50, 50, row=0) 
-               for i in range(0, WIDTH // 100)]
-    enemies_row2 = [Enemy(i * 100, 125, 50, 50, row=1) 
-               for i in range(0, WIDTH // 100)]
-    enemies_row3 = [Enemy(i * 100, 225, 50, 50, row=2) 
-               for i in range(0, WIDTH // 100)]
-    enemies_row4 = [Enemy(i * 100, 325, 50, 50, row=3) 
-               for i in range(0, WIDTH // 100)]
+    enemies_row1 = [Enemy(i * 90, 0, row=0) for i in range(0, WIDTH // 100)]
+    enemies_row2 = [Enemy(i * 90, 75, row=1) for i in range(0, WIDTH // 100)]
+    enemies_row3 = [Enemy(i * 90, 150, row=2) for i in range(0, WIDTH // 100)]
+    enemies_row4 = [Enemy(i * 90, 225, row=3) for i in range(0, WIDTH // 100)]
     
     enemies = [*enemies_row1, *enemies_row2, *enemies_row3, *enemies_row4]
     remaining_rows = set(enemy.row for enemy in enemies if enemy.row is not None)
     
     score = 0
+    last_shot = 0
 
     while running:
         clock.tick(FPS)
-        bg_image = pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
+        background = pygame.transform.scale(pygame.image.load(join("assets", "background.png")), (WIDTH, HEIGHT))
+        now = pygame.time.get_ticks()
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -406,27 +399,25 @@ def main(window):
             
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    if missile is None:
-                        m_x = player.rect.x
+                    if missile is None and now - last_shot >= 500:
+                        m_x = player.rect.centerx
                         m_y = player.rect.y
-                        missile = Missile(m_x, m_y, 32, 32)
+                        missile = Missile(m_x, m_y)
                         mixer.Sound.play(mixer.Sound(join("assets", "laser.wav")))
+                        last_shot = now
                 
                 if event.key == pygame.K_ESCAPE:
                     pause_menu(window)
-
-        now = pygame.time.get_ticks()
         
         if enemies and now - last_enemy_shot >= 1000:
             shooter = random.choice(enemies)
-            em_w, em_h = 24, 24
             em_x = shooter.rect.centerx
             em_y = shooter.rect.bottom
             
-            enemy_missiles.append(EnemyMissile(em_x, em_y, em_w, em_h))
+            enemy_missiles.append(EnemyMissile(em_x, em_y))
             last_enemy_shot = now
 
-        draw(window, bg_image, player, enemies, missile, enemy_missiles)
+        draw(window, background, player, enemies, missile, enemy_missiles)
         
         handle_player_movement(player)
         
@@ -480,21 +471,22 @@ def main(window):
                     break
 
         if player_hit or enemies == []:
-            game_over = game_over_menu(window, score)
+            game_over = game_over_menu(window, score, won=False if player_hit else True)
             
             if game_over:
-                ENEMY_VEL = 0.2
-                ENEMY_DIR = 1
+                ENEMY_VEL = 0.5
+                ENEMY_DIR = -1
                 
-                player = Player(550, 700, 50, 50)
+                score = 0
+                
+                player = Player(600, 675)
                 missile = None
-                enemies_row1 = [Enemy(i * 100, 25, 50, 50, row=0) for i in range(0, WIDTH // 100)]
-                enemies_row2 = [Enemy(i * 100, 125, 50, 50, row=1) for i in range(0, WIDTH // 100)]
-                enemies_row3 = [Enemy(i * 100, 225, 50, 50, row=2) for i in range(0, WIDTH // 100)]
-                enemies_row4 = [Enemy(i * 100, 325, 50, 50, row=3) for i in range(0, WIDTH // 100)]
+                enemies_row1 = [Enemy(i * 85, 0, row=0) for i in range(0, WIDTH // 100)]
+                enemies_row2 = [Enemy(i * 85, 75, row=1) for i in range(0, WIDTH // 100)]
+                enemies_row3 = [Enemy(i * 85, 150, row=2) for i in range(0, WIDTH // 100)]
+                enemies_row4 = [Enemy(i * 85, 225, row=3) for i in range(0, WIDTH // 100)]
                 enemies = [*enemies_row1, *enemies_row2, *enemies_row3, *enemies_row4]
                 remaining_rows = set(enemy.row for enemy in enemies if enemy.row is not None)
-                score = 0
 
             else:
                 running = False
